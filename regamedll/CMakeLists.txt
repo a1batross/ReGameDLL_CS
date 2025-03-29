@@ -17,7 +17,7 @@
 #    make
 #----------------------------------------
 
-cmake_minimum_required(VERSION 3.1)
+cmake_minimum_required(VERSION 3.5)
 project(regamedll CXX)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
@@ -31,24 +31,28 @@ set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Avoid -rdynamic -fPIC options
-if(NOT XASH_COMPAT)
+if (NOT XASH_COMPAT)
 	set(CMAKE_SHARED_LIBRARY_CXX_FLAGS "")
 	set(CMAKE_SHARED_LIBRARY_LINK_CXX_FLAGS "")
 endif()
 
-set(COMPILE_FLAGS "-U_FORTIFY_SOURCE")
+if (MSVC)
+	set(COMPILE_FLAGS "")
+else()
+	set(COMPILE_FLAGS "-U_FORTIFY_SOURCE")
+endif()
 set(LINK_LIBS dl)
 
 # do not strip debuginfo during link
-if(NOT DEBUG)
+if (NOT DEBUG)
 	set(LINK_FLAGS "-s")
 endif()
 
 # add -m32 flag only on 64-bit systems, if building for 64-bit wasn't enabled with XASH_COMPAT
-if(CMAKE_SIZEOF_VOID_P EQUAL 8)
-	if(XASH_COMPAT)
+if (CMAKE_SIZEOF_VOID_P EQUAL 8)
+	if (XASH_COMPAT)
 		set(COMPILE_FLAGS "${COMPILE_FLAGS} -DXASH_64BIT")
-	else()
+	elseif (NOT MSVC)
 		set(COMPILE_FLAGS "${COMPILE_FLAGS} -m32")
 		set(LINK_FLAGS "${LINK_FLAGS} -m32")
 		list(APPEND LINK_LIBS aelf32)
@@ -62,19 +66,21 @@ if(XASH_COMPAT)
 	include(LibraryNaming)
 endif()
 
-set(COMPILE_FLAGS "${COMPILE_FLAGS} -Wall -fno-exceptions -fno-builtin -Wno-unknown-pragmas")
+if (NOT MSVC)
+	set(COMPILE_FLAGS "${COMPILE_FLAGS} -Wall -fno-exceptions -fno-builtin -Wno-unknown-pragmas")
 
-# Remove noxref code and data
-set(COMPILE_FLAGS "${COMPILE_FLAGS} -ffunction-sections -fdata-sections")
+	# Remove noxref code and data
+	set(COMPILE_FLAGS "${COMPILE_FLAGS} -ffunction-sections -fdata-sections")
 
-if(DEBUG)
-	set(COMPILE_FLAGS "${COMPILE_FLAGS} -g3 -O3 -ggdb")
-else()
-	set(COMPILE_FLAGS "${COMPILE_FLAGS} -g0 -O3 -fno-stack-protector")
+	if (DEBUG)
+		set(COMPILE_FLAGS "${COMPILE_FLAGS} -g3 -O3 -ggdb")
+	else()
+		set(COMPILE_FLAGS "${COMPILE_FLAGS} -g0 -O3 -fno-stack-protector")
+	endif()
 endif()
 
 # Check Intel C++ compiler
-if(CMAKE_CXX_COMPILER_ID STREQUAL "Intel")
+if (CMAKE_CXX_COMPILER_ID STREQUAL "Intel")
 	#
 	# -fp-model=precise
 	# ICC uses -fp-model fast=1 by default for more aggressive optimizations on floating-point calculations
@@ -98,12 +104,12 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "Intel")
 		-static-intel\
 		-no-intel-extensions")
 
-	if(NOT DEBUG)
+	if (NOT DEBUG)
 		set(COMPILE_FLAGS "${COMPILE_FLAGS} -ipo")
 		set(LINK_FLAGS "${LINK_FLAGS} -ipo")
 	endif()
-elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-	if(NOT XASH_COMPAT OR XASH_AMD64 OR XASH_X86)
+elseif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+	if (NOT XASH_COMPAT OR XASH_AMD64 OR XASH_X86)
 		# Produce code optimized for the most common IA32/AMD64/EM64T processors.
 		# As new processors are deployed in the marketplace, the behavior of this option will change.
 		set(COMPILE_FLAGS "${COMPILE_FLAGS} \
@@ -118,7 +124,7 @@ elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID STREQUAL "C
 		-Wno-sign-compare -Wno-format -Wno-ignored-attributes -Wno-strict-aliasing")
 
 	# Check Clang compiler
-	if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+	if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
 		set(COMPILE_FLAGS "${COMPILE_FLAGS} \
 			-Wno-unused-local-typedef\
 			-Wno-unused-private-field\
@@ -132,13 +138,13 @@ elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID STREQUAL "C
 			-Wno-unused-but-set-variable")
 
 		# GCC >= 8.3
-		if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 8.0)
+		if (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 8.0)
 			set(COMPILE_FLAGS "${COMPILE_FLAGS} -Wno-stringop-truncation -Wno-format-truncation -Wno-class-memaccess -fcf-protection=none")
 		endif()
 	endif()
 endif()
 
-if(NOT DEBUG)
+if (NOT DEBUG AND NOT MSVC)
 	set(LINK_FLAGS "${LINK_FLAGS} \
 		-Wl,-gc-sections -Wl,--version-script=\"${PROJECT_SOURCE_DIR}/../version_script.lds\"")
 endif()
@@ -327,7 +333,7 @@ set(GAMEDLL_SRCS
 	"dlls/hostage/states/hostage_retreat.cpp"
 )
 
-if(MSVC)
+if (MSVC)
 	set(GAMEDLL_SRCS ${GAMEDLL_SRCS}
 		"msvc/mp.def"
 		"public/tier0/assert_dialog.cpp"
@@ -344,8 +350,8 @@ set(UNITTESTS_SRCS
 	"unittests/TestRunner.cpp"
 )
 
-if(CMAKE_BUILD_TYPE MATCHES Unittests)
-	if(NOT TARGET cppunitlite)
+if (CMAKE_BUILD_TYPE MATCHES Unittests)
+	if (NOT TARGET cppunitlite)
 		add_subdirectory(../dep/cppunitlite cppunitlite)
 	endif()
 
@@ -355,7 +361,7 @@ else()
 	add_library(regamedll MODULE ${appversion.sh})
 endif()
 
-if(NOT TARGET appversion)
+if (NOT TARGET appversion)
 	add_custom_target(appversion DEPENDS COMMAND "${PROJECT_SOURCE_DIR}/version/appversion.sh" "${PROJECT_SOURCE_DIR}/..")
 endif()
 
@@ -378,8 +384,8 @@ target_compile_definitions(regamedll PRIVATE
 	NDEBUG
 )
 
-if(MSVC)
-	target_compile_definitions(regamedll
+if (MSVC)
+	target_compile_definitions(regamedll PRIVATE
 		_CRT_SECURE_NO_WARNINGS
 		_CRT_NONSTDC_NO_DEPRECATE)
 else()
@@ -398,14 +404,6 @@ else()
 		_access=access
 		_vsnwprintf=vswprintf
 	)
-
-	target_compile_options(regamedll PRIVATE
-		-U_FORTIFY_SOURCE
-		-fms-extensions
-		-fpermissive
-		-Wno-write-strings
-		-fno-exceptions
-	)
 endif()
 
 target_sources(regamedll PRIVATE
@@ -417,22 +415,22 @@ target_sources(regamedll PRIVATE
 	${UNITTESTS_SRCS}>
 )
 
-if(CMAKE_BUILD_TYPE MATCHES Unittests)
+if (CMAKE_BUILD_TYPE MATCHES Unittests)
 	list(APPEND LINK_LIBS cppunitlite)
-elseif(USE_LEGACY_LIBC)
+elseif (USE_LEGACY_LIBC)
 	list(APPEND LINK_LIBS libc-2.15.so)
 endif()
 
 target_link_libraries(regamedll PRIVATE ${LINK_LIBS})
 
-if(USE_STATIC_LIBSTDC)
+if (USE_STATIC_LIBSTDC)
 	target_compile_definitions(regamedll PRIVATE BUILD_STATIC_LIBSTDC)
 	set(LINK_FLAGS "${LINK_FLAGS} -static-libgcc -static-libstdc++")
 endif()
 
 set(LINK_FLAGS "${LINK_FLAGS} -Wl,-rpath,'$ORIGIN/.'")
 
-if(CMAKE_SIZEOF_VOID_P EQUAL 4)
+if (CMAKE_SIZEOF_VOID_P EQUAL 4)
 	set(LINK_FLAGS "${LINK_FLAGS} -L${PROJECT_SOURCE_DIR}/lib/linux32")
 endif()
 
@@ -441,11 +439,11 @@ set_target_properties(regamedll PROPERTIES
 	LINK_FLAGS ${LINK_FLAGS}
 )
 
-if(XASH_COMPAT)
-	if(CMAKE_SYSTEM_NAME STREQUAL "Android")
+if (XASH_COMPAT)
+	if (CMAKE_SYSTEM_NAME STREQUAL "Android")
 		set_target_properties(regamedll PROPERTIES
 			OUTPUT_NAME server)
-	elseif(WIN32)
+	elseif (WIN32)
 		set_target_properties(regamedll PROPERTIES
 			PREFIX ""
 			OUTPUT_NAME mp${POSTFIX})
@@ -454,7 +452,7 @@ if(XASH_COMPAT)
 			PREFIX ""
 			OUTPUT_NAME cs${POSTFIX})
 	endif()
-elseif(WIN32)
+elseif (WIN32)
 	set_target_properties(regamedll PROPERTIES
 		OUTPUT_NAME mp
 		PREFIX ""
@@ -473,7 +471,7 @@ install(TARGETS regamedll
 	GROUP_READ GROUP_EXECUTE
 	WORLD_READ WORLD_EXECUTE)
 
-if(MSVC)
+if (MSVC)
 	install(FILES $<TARGET_PDB_FILE:regamedll>
 		DESTINATION "cstrike/dlls/" OPTIONAL)
 endif()

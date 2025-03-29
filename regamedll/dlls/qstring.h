@@ -30,16 +30,18 @@
 
 #define QSTRING_DEFINE
 
-constexpr unsigned int iStringNull = {0};
-
 // Quake string (helper class)
 class QString final
 {
 public:
+#if XASH_64BIT
+	using qstring_t = int;
+#else
 	using qstring_t = unsigned int;
+#endif
 
-	QString(): m_string(iStringNull) {};
-	QString(qstring_t string): m_string(string) {};
+	QString();
+	QString(qstring_t string);
 
 	bool IsNull() const;
 	bool IsNullOrEmpty() const;
@@ -52,12 +54,14 @@ public:
 	bool operator==(const char *pszString) const;
 
 	operator const char *() const;
-	operator unsigned int() const;
+	operator qstring_t() const;
 	const char *str() const;
 
 private:
 	qstring_t m_string;
 };
+
+constexpr QString::qstring_t iStringNull = {0};
 
 #ifdef USE_QSTRING
 #define string_t QString
@@ -70,23 +74,25 @@ private:
 
 extern globalvars_t *gpGlobals;
 
-#if !defined(__x86_64__) && !defined(_WIN64) && !defined(__aarch64__) && !defined(__powerpc64__) && !defined(__ppc64__)
-#define STRING(offset)   ((const char *)(gpGlobals->pStringBase + (unsigned int)(offset)))
-#define MAKE_STRING(str) ((unsigned int)(str) - (unsigned int)(STRING(0)))
-#else
-#define STRING(offset)      ((const char *)(gpGlobals->pStringBase + (int)offset))
-
-static inline int MAKE_STRING(const char *szValue)
+#define STRING(offset)   ((const char *)(gpGlobals->pStringBase + (QString::qstring_t)(offset)))
+#if XASH_64BIT
+// Xash3D FWGS in 64-bit mode has internal string pool which allows mods to continue use 32-bit string_t
+inline int MAKE_STRING(const char *str)
 {
-	long long ptrdiff = szValue - STRING(0);
-	if( ptrdiff > INT_MAX || ptrdiff < INT_MIN )
-		return ALLOC_STRING( szValue );
-	else
-		return (int)ptrdiff;
+	ptrdiff_t diff = str - STRING(0);
+	if (diff >= INT_MIN && diff <= INT_MAX)
+		return (int)diff;
+
+	return ALLOC_STRING(str);
 }
+#else
+#define MAKE_STRING(str) ((QString::qstring_t)(str) - (QString::qstring_t)(STRING(0)))
 #endif
 
 // Inlines
+inline QString::QString(): m_string(iStringNull) {}
+inline QString::QString(qstring_t string): m_string(string) {}
+
 inline bool QString::IsNull() const
 {
 	return m_string == iStringNull;
@@ -128,7 +134,7 @@ inline QString::operator const char *() const
 	return str();
 }
 
-inline QString::operator unsigned int() const
+inline QString::operator qstring_t() const
 {
 	return m_string;
 }

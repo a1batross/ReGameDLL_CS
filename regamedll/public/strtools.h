@@ -31,7 +31,6 @@
 #ifdef _WIN32
 const char CORRECT_PATH_SEPARATOR = '\\';
 const char INCORRECT_PATH_SEPARATOR = '/';
-#pragma warning(disable : 4267)	// 'argument': conversion from 'size_t' to 'int32', possible loss of data
 #else
 const char CORRECT_PATH_SEPARATOR = '/';
 const char INCORRECT_PATH_SEPARATOR = '\\';

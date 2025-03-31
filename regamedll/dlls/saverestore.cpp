@@ -277,7 +277,7 @@ void CSaveRestoreBuffer::BufferRewind(int size)
 	m_pData->size -= size;
 }
 
-#if !defined(_WIN32) && !defined(__ANDROID__)
+#if !defined(_WIN32)
 extern "C"
 {
 	inline unsigned _rotr(unsigned val, int shift)
@@ -426,7 +426,7 @@ void CSave::WritePositionVector(const char *pname, const float *value, int count
 
 void CSave::WriteFunction(const char *pname, void **data, int count)
 {
-	const char *functionName = NAME_FOR_FUNCTION((uint32)*data);
+	const char *functionName = NAME_FOR_FUNCTION(*data);
 
 	if (functionName)
 		BufferField(pname, Q_strlen(functionName) + 1, functionName);

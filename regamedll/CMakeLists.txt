@@ -25,7 +25,7 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 option(DEBUG "Build with debug information." OFF)
 option(USE_STATIC_LIBSTDC "Enables static linking libstdc++." OFF)
 option(USE_LEGACY_LIBC "Enables linking against legacy libc (<= 2.15) for compat with older distros (Debian 8/Ubuntu 16.04/Centos 7)." OFF)
-option(XASH_COMPAT "Enable Xash3D FWGS compatiblity (support for it's 64-bit ABI support and crossplatform library suffix)")
+option(XASH_COMPAT "Enable Xash3D FWGS compatiblity (support for it's 64-bit ABI support and crossplatform library suffix)" OFF)
 
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -140,7 +140,7 @@ elseif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID STREQUAL "
 	endif()
 endif()
 
-if (NOT DEBUG)
+if (NOT DEBUG AND NOT ANDROID)
 	set(LINK_FLAGS "${LINK_FLAGS} \
 		-Wl,-gc-sections -Wl,--version-script=\"${PROJECT_SOURCE_DIR}/../version_script.lds\"")
 endif()
@@ -426,7 +426,7 @@ endif()
 
 set(LINK_FLAGS "${LINK_FLAGS} -Wl,-rpath,'$ORIGIN/.'")
 
-if (CMAKE_SIZEOF_VOID_P EQUAL 4)
+if (CMAKE_SIZEOF_VOID_P EQUAL 4 AND NOT ANDROID)
 	set(LINK_FLAGS "${LINK_FLAGS} -L${PROJECT_SOURCE_DIR}/lib/linux32")
 endif()
 

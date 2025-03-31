@@ -36,12 +36,10 @@ if (NOT XASH_COMPAT)
 	set(CMAKE_SHARED_LIBRARY_LINK_CXX_FLAGS "")
 endif()
 
-if (MSVC)
-	set(COMPILE_FLAGS "")
-else()
-	set(COMPILE_FLAGS "-U_FORTIFY_SOURCE")
+set(COMPILE_FLAGS "-U_FORTIFY_SOURCE")
+if(NOT MSVC)
+	set(LINK_LIBS dl)
 endif()
-set(LINK_LIBS dl)
 
 # do not strip debuginfo during link
 if (NOT DEBUG)
@@ -66,17 +64,15 @@ if(XASH_COMPAT)
 	include(LibraryNaming)
 endif()
 
-if (NOT MSVC)
-	set(COMPILE_FLAGS "${COMPILE_FLAGS} -Wall -fno-exceptions -fno-builtin -Wno-unknown-pragmas")
+set(COMPILE_FLAGS "${COMPILE_FLAGS} -Wall -fno-exceptions -fno-builtin -Wno-unknown-pragmas")
 
-	# Remove noxref code and data
-	set(COMPILE_FLAGS "${COMPILE_FLAGS} -ffunction-sections -fdata-sections")
+# Remove noxref code and data
+set(COMPILE_FLAGS "${COMPILE_FLAGS} -ffunction-sections -fdata-sections")
 
-	if (DEBUG)
-		set(COMPILE_FLAGS "${COMPILE_FLAGS} -g3 -O3 -ggdb")
-	else()
-		set(COMPILE_FLAGS "${COMPILE_FLAGS} -g0 -O3 -fno-stack-protector")
-	endif()
+if (DEBUG)
+	set(COMPILE_FLAGS "${COMPILE_FLAGS} -g3 -O3 -ggdb")
+else()
+	set(COMPILE_FLAGS "${COMPILE_FLAGS} -g0 -O3 -fno-stack-protector")
 endif()
 
 # Check Intel C++ compiler
@@ -144,7 +140,7 @@ elseif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID STREQUAL "
 	endif()
 endif()
 
-if (NOT DEBUG AND NOT MSVC)
+if (NOT DEBUG)
 	set(LINK_FLAGS "${LINK_FLAGS} \
 		-Wl,-gc-sections -Wl,--version-script=\"${PROJECT_SOURCE_DIR}/../version_script.lds\"")
 endif()
@@ -434,10 +430,12 @@ if (CMAKE_SIZEOF_VOID_P EQUAL 4)
 	set(LINK_FLAGS "${LINK_FLAGS} -L${PROJECT_SOURCE_DIR}/lib/linux32")
 endif()
 
-set_target_properties(regamedll PROPERTIES
-	COMPILE_FLAGS ${COMPILE_FLAGS}
-	LINK_FLAGS ${LINK_FLAGS}
-)
+if (NOT MSVC)
+	set_target_properties(regamedll PROPERTIES
+		COMPILE_FLAGS ${COMPILE_FLAGS}
+		LINK_FLAGS ${LINK_FLAGS}
+	)
+endif()
 
 if (XASH_COMPAT)
 	if (CMAKE_SYSTEM_NAME STREQUAL "Android")
@@ -455,8 +453,7 @@ if (XASH_COMPAT)
 elseif (WIN32)
 	set_target_properties(regamedll PROPERTIES
 		OUTPUT_NAME mp
-		PREFIX ""
-		POSITION_INDEPENDENT_CODE OFF)
+		PREFIX "")
 else()
 	set_target_properties(regamedll PROPERTIES
 		OUTPUT_NAME cs

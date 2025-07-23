@@ -1233,7 +1233,7 @@ BOOL EXT_FUNC CBasePlayer::__API_HOOK(TakeDamage)(entvars_t *pevInflictor, entva
 
 		if (!ShouldDoLargeFlinch(m_LastHitGroup, iGunType))
 		{
-			m_flVelocityModifier = 0.5f;
+			TakeDamageImpulse(pAttack, 0.0f, 0.5f);
 
 			if (m_LastHitGroup == HITGROUP_HEAD)
 				m_bHighDamage = (flDamage > 60);
@@ -1246,10 +1246,13 @@ BOOL EXT_FUNC CBasePlayer::__API_HOOK(TakeDamage)(entvars_t *pevInflictor, entva
 		{
 			if (pev->velocity.Length() < 300)
 			{
-				Vector attack_velocity = (pev->origin - pAttack->pev->origin).Normalize() * 170;
-				pev->velocity = pev->velocity + attack_velocity;
+#ifdef REGAMEDLL_ADD
+				float knockbackValue = knockback.value;
+#else
+				float knockbackValue = 170;
+#endif
 
-				m_flVelocityModifier = 0.65f;
+				TakeDamageImpulse(pAttack, knockbackValue, 0.65f);
 			}
 
 			SetAnimation(PLAYER_LARGE_FLINCH);
@@ -5594,7 +5597,9 @@ CTSpawn:
 	// The terrorist spawn points
 	else if (g_pGameRules->IsDeathmatch() && m_iTeam == TERRORIST)
 	{
+#ifdef REGAMEDLL_ADD
 TSpawn:
+#endif
 		pSpot = g_pLastTerroristSpawn;
 
 		if (SelectSpawnSpot("info_player_deathmatch", pSpot))
@@ -8164,7 +8169,9 @@ void CBasePlayer::InitStatusBar()
 	m_SbarString0[0] = '\0';
 }
 
-void CBasePlayer::UpdateStatusBar()
+LINK_HOOK_CLASS_VOID_CHAIN2(CBasePlayer, UpdateStatusBar)
+
+void EXT_FUNC CBasePlayer::__API_HOOK(UpdateStatusBar)()
 {
 	int newSBarState[SBAR_END];
 	char sbuf0[MAX_SBAR_STRING];
@@ -10861,6 +10868,17 @@ bool CBasePlayer::Kill()
 		CSGameRules()->m_iConsecutiveVIP = 10;
 
 	return true;
+}
+
+LINK_HOOK_CLASS_VOID_CHAIN(CBasePlayer, TakeDamageImpulse, (CBasePlayer *pAttacker, float flKnockbackForce, float flVelModifier), pAttacker, flKnockbackForce, flVelModifier)
+
+void EXT_FUNC CBasePlayer::__API_HOOK(TakeDamageImpulse)(CBasePlayer *pAttacker, float flKnockbackForce, float flVelModifier)
+{
+	if (flKnockbackForce != 0.0f)
+		pev->velocity += (pev->origin - pAttacker->pev->origin).Normalize() * flKnockbackForce;
+
+	if (flVelModifier != 0.0f)
+		m_flVelocityModifier = flVelModifier;
 }
 
 const usercmd_t *CBasePlayer::GetLastUserCommand() const

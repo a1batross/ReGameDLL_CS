@@ -442,6 +442,9 @@ if (XASH_COMPAT)
 		set_target_properties(regamedll PROPERTIES
 			OUTPUT_NAME server)
 	elseif (WIN32)
+		if (CMAKE_SIZEOF_VOID_P EQUAL 8)
+			target_compile_definitions(regamedll PRIVATE XASH_64BIT)
+		endif()
 		set_target_properties(regamedll PROPERTIES
 			PREFIX ""
 			OUTPUT_NAME mp${POSTFIX})

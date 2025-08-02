@@ -438,10 +438,7 @@ if (NOT MSVC)
 endif()
 
 if (XASH_COMPAT)
-	if (CMAKE_SYSTEM_NAME STREQUAL "Android")
-		set_target_properties(regamedll PROPERTIES
-			OUTPUT_NAME server)
-	elseif (WIN32)
+	if (WIN32)
 		if (CMAKE_SIZEOF_VOID_P EQUAL 8)
 			target_compile_definitions(regamedll PRIVATE XASH_64BIT)
 		endif()

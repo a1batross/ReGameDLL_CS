@@ -442,13 +442,9 @@ if (XASH_COMPAT)
 		if (CMAKE_SIZEOF_VOID_P EQUAL 8)
 			target_compile_definitions(regamedll PRIVATE XASH_64BIT)
 		endif()
-		set_target_properties(regamedll PROPERTIES
-			PREFIX ""
-			OUTPUT_NAME mp${POSTFIX})
+		set_target_postfix_with_name(regamedll mp)
 	else()
-		set_target_properties(regamedll PROPERTIES
-			PREFIX ""
-			OUTPUT_NAME cs${POSTFIX})
+		set_target_postfix_with_name(regamedll cs)
 	endif()
 elseif (WIN32)
 	set_target_properties(regamedll PROPERTIES
